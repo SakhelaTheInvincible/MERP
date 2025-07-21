@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ event.title }} - Magic Events{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div id="loading" class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div id="event-content" style="display: none;">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div id="event-thumbnail"></div>
+                    <div class="card-body">
+                        <h1 id="event-title" class="card-title"></h1>
+                        <div id="event-details" class="mb-4"></div>
+                        <div id="event-description"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-user-plus"></i> Event Registration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="registration-status"></div>
+                        <div id="registration-form"></div>
+                        <div id="registration-success" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const eventId = {{ event.id }};
+
+function parseDate(dateString) {
+    // Handle Django's datetime format with microseconds
+    if (!dateString) return new Date();
+    
+    try {
+        // Remove microseconds if present
+        let cleanDate = dateString;
+        if (cleanDate.includes('.') && cleanDate.endsWith('Z')) {
+            cleanDate = cleanDate.replace(/\.\d{1,6}Z$/, 'Z');
+        }
+        
+        const parsedDate = new Date(cleanDate);
+        
+        // Check if the date is valid
+        if (isNaN(parsedDate.getTime())) {
+            return new Date();
+        }
+        
+        return parsedDate;
+    } catch (error) {
+        return new Date();
+    }
+}
+
+$(document).ready(function() {
+    loadEventDetails();
+});
+
+function loadEventDetails() {
+    $.ajax({
+        url: `/api/events/${eventId}/`,
+        method: 'GET',
+        success: function(event) {
+            displayEventDetails(event);
+            setupRegistrationForm(event);
+            $('#loading').hide();
+            $('#event-content').show();
+        },
+        error: function() {
+            $('#loading').hide();
+            $('.container').html('<div class="alert alert-danger">Error loading event details.</div>');
+        }
+    });
+}
+
+function displayEventDetails(event) {
+    const startDate = parseDate(event.start_date);
+    const endDate = parseDate(event.end_date);
+    const thumbnailUrl = event.thumbnail || 'https://via.placeholder.com/800x400?text=Event';
+    
+    $('#event-title').text(event.title);
+    
+    if (event.thumbnail) {
+        $('#event-thumbnail').html(`
+            <img src="${thumbnailUrl}" class="card-img-top" alt="${event.title}" style="height: 300px; object-fit: cover; border-radius: 16px 16px 0 0;">
+        `);
+    }
+    
+    $('#event-details').html(`
+        <div class="row">
+            <div class="col-sm-6 mb-3">
+                <strong><i class="fas fa-calendar-start"></i> Start Date:</strong><br>
+                <span class="text-muted">${startDate.toLocaleString()}</span>
+            </div>
+            <div class="col-sm-6 mb-3">
+                <strong><i class="fas fa-calendar-check"></i> End Date:</strong><br>
+                <span class="text-muted">${endDate.toLocaleString()}</span>
+            </div>
+            <div class="col-sm-6 mb-3">
+                <strong><i class="fas fa-clock"></i> Duration:</strong><br>
+                <span class="text-muted">${event.duration_days || 0} day(s)</span>
+            </div>
+            <div class="col-sm-6 mb-3">
+                <strong><i class="fas fa-users"></i> Registered:</strong><br>
+                <span class="text-muted">${event.registration_count || 0} people</span>
+            </div>
+        </div>
+    `);
+    
+    if (event.description) {
+        $('#event-description').html(`
+            <h5>About This Event</h5>
+            <p>${event.description}</p>
+        `);
+    }
+}
+
+function setupRegistrationForm(event) {
+    if (!event.can_register) {
+        $('#registration-status').html(`
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Registration is closed for this event.
+            </div>
+        `);
+        return;
+    }
+    
+    $('#registration-status').html(`
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            Registration is open!
+        </div>
+    `);
+    
+    {% if user.is_authenticated %}
+        $('#registration-form').html(`
+            <form id="registrationForm">
+                <div class="alert alert-info">
+                    <strong>Registering as:</strong><br>
+                    {{ user.get_full_name|default:user.username }}<br>
+                    <small class="text-muted">{{ user.email }}</small>
+                </div>
+                <div class="mb-3">
+                    <label for="phone" class="form-label">Phone (Optional)</label>
+                    <input type="tel" class="form-control" id="phone" placeholder="Your phone number">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-user-plus"></i> Register for Event
+                </button>
+            </form>
+        `);
+        
+        $('#registrationForm').submit(function(e) {
+            e.preventDefault();
+            submitRegistration();
+        });
+    {% else %}
+        $('#registration-form').html(`
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                You must be logged in to register for events.
+            </div>
+            <div class="d-grid gap-2">
+                <a href="/accounts/login/?next=/events/${eventId}/" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login to Register
+                </a>
+                <a href="/accounts/signup/" class="btn btn-outline-primary">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </a>
+            </div>
+        `);
+    {% endif %}
+}
+
+function submitRegistration() {
+    const formData = {
+        event: eventId,
+        phone: $('#phone').val()
+    };
+    
+    $('#registrationForm button').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Registering...');
+    
+    $.ajax({
+        url: '/api/registrations/',
+        method: 'POST',
+        data: JSON.stringify(formData),
+        contentType: 'application/json',
+        success: function(response) {
+            $('#registration-form').hide();
+            $('#registration-success').html(`
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> Registration Successful!</h6>
+                    <p>Your management code is:</p>
+                    <div class="alert alert-info">
+                        <strong>${response.registration.management_code}</strong>
+                    </div>
+                    <small class="text-muted">
+                        Save this code! You'll need it to manage your registration.
+                    </small>
+                    <div class="mt-3">
+                        <a href="/manage/" class="btn btn-outline-primary btn-sm">
+                            Manage Registration
+                        </a>
+                    </div>
+                </div>
+            `).show();
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON;
+            let errorMessage = 'Registration failed. Please try again.';
+            
+            if (error && error.non_field_errors) {
+                errorMessage = error.non_field_errors[0];
+            }
+            
+            $('#registration-form').prepend(`
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-triangle"></i> ${errorMessage}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+            
+            $('#registrationForm button').prop('disabled', false).html('<i class="fas fa-user-plus"></i> Register for Event');
+        }
+    });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Registration - Magic Events{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-cog"></i> Manage Your Registration</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Enter your management code to view and manage your event registration.
+                    </p>
+                    
+                    <!-- Quick access to user's registrations -->
+                    <div class="mb-4">
+                        <button id="toggleRegistrationsBtn" class="btn btn-outline-primary" onclick="toggleMyRegistrations()">
+                            <i class="fas fa-list"></i> Show All My Registrations
+                        </button>
+                    </div>
+                    
+                    <div id="my-registrations" style="display: none;">
+                        <h5>My Registrations</h5>
+                        <p class="text-muted small mb-3">Showing most recent registrations</p>
+                        <div id="my-registrations-list"></div>
+                        <hr>
+                    </div>
+                    
+                    <div id="lookup-form">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Secure Access:</strong> You can only view and manage your own registrations.
+                        </div>
+                        <form id="managementForm">
+                            <div class="mb-3">
+                                <label for="management_code" class="form-label">Management Code</label>
+                                <input type="text" class="form-control" id="management_code" 
+                                       placeholder="Enter your management code" required>
+                                <div class="form-text">
+                                    This code was provided when you registered for the event.
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Look Up My Registration
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div id="registration-details" style="display: none;">
+                        <hr class="my-4">
+                        <div id="registration-info"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function parseDate(dateString) {
+    // Handle Django's datetime format with microseconds
+    if (!dateString) return new Date();
+    // Remove microseconds if present and parse
+    const cleanDate = dateString.replace(/\.\d{6}Z$/, 'Z');
+    return new Date(cleanDate);
+}
+
+$(document).ready(function() {
+    $('#managementForm').submit(function(e) {
+        e.preventDefault();
+        lookupRegistration();
+    });
+});
+
+function toggleMyRegistrations() {
+    const registrationsDiv = $('#my-registrations');
+    const button = $('#toggleRegistrationsBtn');
+    
+    if (registrationsDiv.is(':visible')) {
+        // Hide registrations
+        registrationsDiv.hide();
+        button.html('<i class="fas fa-list"></i> Show All My Registrations');
+    } else {
+        // Show registrations - always load fresh data
+        loadMyRegistrations();
+    }
+}
+
+function loadMyRegistrations() {
+    $.ajax({
+        url: '/api/registrations/my/',
+        method: 'GET',
+        success: function(registrations) {
+            displayMyRegistrations(registrations);
+            $('#my-registrations').show();
+            $('#toggleRegistrationsBtn').html('<i class="fas fa-eye-slash"></i> Hide My Registrations');
+        },
+        error: function(xhr) {
+            if (xhr.status === 401) {
+                showError('Authentication required. Please log in.');
+            } else {
+                showError('Error loading your registrations. Please try again.');
+            }
+        }
+    });
+}
+
+function displayMyRegistrations(registrations) {
+    if (registrations.length === 0) {
+        $('#my-registrations-list').html(`
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> You have no registrations yet.
+            </div>
+        `);
+        return;
+    }
+    
+    let html = '';
+    registrations.forEach(function(registration) {
+        const startDate = parseDate(registration.event.start_date);
+        const endDate = parseDate(registration.event.end_date);
+        const thumbnailUrl = registration.event.thumbnail || 'https://via.placeholder.com/150x100?text=Event';
+        
+        let statusBadge = '';
+        if (registration.status === 'active') {
+            statusBadge = '<span class="badge bg-success">Active</span>';
+        } else {
+            statusBadge = '<span class="badge bg-secondary">Cancelled</span>';
+        }
+        
+                 let actionButton = '';
+         if (registration.status === 'active' && registration.can_cancel) {
+             actionButton = `
+                 <button class="btn btn-danger btn-sm" onclick="quickCancelRegistration('${registration.management_code}')">
+                     <i class="fas fa-times"></i> Cancel
+                 </button>
+             `;
+         }
+        
+        html += `
+            <div class="card mb-3">
+                <div class="row g-0">
+                    <div class="col-md-3">
+                        <img src="${thumbnailUrl}" class="img-fluid rounded-start h-100" 
+                             alt="${registration.event.title}" style="object-fit: cover;">
+                    </div>
+                    <div class="col-md-9">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="card-title">${registration.event.title}</h6>
+                                ${statusBadge}
+                            </div>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i> 
+                                    ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}
+                                </small>
+                            </p>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    Registered: ${parseDate(registration.created_at).toLocaleDateString()}
+                                </small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    $('#my-registrations-list').html(html);
+}
+
+function quickCancelRegistration(managementCode) {
+    if (!confirm('Are you sure you want to cancel this registration? This action cannot be undone.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/registrations/${managementCode}/cancel/`,
+        method: 'POST',
+        success: function(response) {
+            // Refresh the registrations list
+            loadMyRegistrations();
+            
+            // Show success message
+            $('#my-registrations-list').prepend(`
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle"></i> Registration cancelled successfully
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON;
+            let errorMessage = 'Unable to cancel registration. Please try again.';
+            
+            if (error && error.error) {
+                errorMessage = error.error;
+                if (error.reason) {
+                    errorMessage += ': ' + error.reason;
+                }
+            } else if (xhr.status === 401) {
+                errorMessage = 'Authentication required. Please log in.';
+            }
+            
+            $('#my-registrations-list').prepend(`
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-triangle"></i> ${errorMessage}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+        }
+    });
+}
+
+function lookupRegistration() {
+    const managementCode = $('#management_code').val().trim();
+    
+    if (!managementCode) {
+        showError('Please enter a management code.');
+        return;
+    }
+    
+    const button = $('#managementForm button');
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Looking up...');
+    
+    // Clear any previous errors
+    $('.alert-danger').remove();
+    
+    $.ajax({
+        url: `/api/registrations/${managementCode}/`,
+        method: 'GET',
+        success: function(registration) {
+            displayRegistrationDetails(registration);
+            $('#registration-details').show();
+            button.prop('disabled', false).html('<i class="fas fa-search"></i> Look Up Registration');
+        },
+        error: function(xhr) {
+            button.prop('disabled', false).html('<i class="fas fa-search"></i> Look Up My Registration');
+            if (xhr.status === 404) {
+                showError('Registration not found or you do not have permission to access it. Please check your management code.');
+            } else if (xhr.status === 401) {
+                showError('Authentication required. Please log in to access your registrations.');
+            } else {
+                showError('Error looking up registration. Please try again.');
+            }
+        }
+    });
+}
+
+function displayRegistrationDetails(registration) {
+    const startDate = parseDate(registration.event.start_date);
+    const endDate = parseDate(registration.event.end_date);
+    const thumbnailUrl = registration.event.thumbnail || 'https://via.placeholder.com/200x120?text=Event';
+    
+    let statusBadge = '';
+    if (registration.status === 'active') {
+        statusBadge = '<span class="badge bg-success">Active</span>';
+    } else {
+        statusBadge = '<span class="badge bg-secondary">Cancelled</span>';
+    }
+    
+    let cancelButton = '';
+    if (registration.status === 'active' && registration.can_cancel) {
+        cancelButton = `
+            <button class="btn btn-danger btn-sm" onclick="cancelRegistration('${registration.event.id}')">
+                <i class="fas fa-times"></i> Cancel Registration
+            </button>
+        `;
+    } else if (registration.status === 'active' && !registration.can_cancel) {
+        cancelButton = `
+            <div class="alert alert-warning mt-3">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    This registration cannot be cancelled. Cancellation is only allowed for events 
+                    lasting no more than 2 days and at least 2 days before the event starts.
+                </small>
+            </div>
+        `;
+    }
+    
+    $('#registration-info').html(`
+        <h5>Registration Details</h5>
+        
+        <div class="card mb-3">
+            <div class="row g-0">
+                <div class="col-md-4">
+                    <img src="${thumbnailUrl}" class="img-fluid rounded-start h-100" 
+                         alt="${registration.event.title}" style="object-fit: cover;">
+                </div>
+                <div class="col-md-8">
+                    <div class="card-body">
+                        <h6 class="card-title">${registration.event.title}</h6>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar"></i> 
+                                ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}
+                            </small>
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> 
+                                ${registration.event.duration_days} day(s)
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Name:</strong></td>
+                        <td>${registration.full_name}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Email:</strong></td>
+                        <td>${registration.email}</td>
+                    </tr>
+                    ${registration.phone ? `
+                    <tr>
+                        <td><strong>Phone:</strong></td>
+                        <td>${registration.phone}</td>
+                    </tr>
+                    ` : ''}
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Registered:</strong></td>
+                        <td>${parseDate(registration.created_at).toLocaleString()}</td>
+                    </tr>
+                    ${registration.cancelled_at ? `
+                    <tr>
+                        <td><strong>Cancelled:</strong></td>
+                        <td>${parseDate(registration.cancelled_at).toLocaleString()}</td>
+                    </tr>
+                    ` : ''}
+                </table>
+            </div>
+            <div class="col-md-6">
+                <div class="text-center">
+                    ${cancelButton}
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+function cancelRegistration(eventId) {
+    if (!confirm('Are you sure you want to cancel your registration? This action cannot be undone.')) {
+        return;
+    }
+    
+    const managementCode = $('#management_code').val();
+    
+    $.ajax({
+        url: `/api/registrations/${managementCode}/cancel/`,
+        method: 'POST',
+        success: function(response) {
+            // Refresh the registration details to show updated status
+            lookupRegistration();
+            
+            // Show success message
+            $('#registration-info').prepend(`
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle"></i> ${response.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+        },
+        error: function(xhr) {
+            const error = xhr.responseJSON;
+            let errorMessage = 'Unable to cancel registration. Please try again.';
+            
+            if (error && error.error) {
+                errorMessage = error.error;
+                if (error.reason) {
+                    errorMessage += ': ' + error.reason;
+                }
+            }
+            
+            $('#registration-info').prepend(`
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-triangle"></i> ${errorMessage}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+        }
+    });
+}
+
+function showError(message) {
+    $('#lookup-form').prepend(`
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle"></i> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+}
+</script>
+{% endblock %} 

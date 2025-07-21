@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Event - Magic Events{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-plus-circle"></i> Create New Event</h4>
+                </div>
+                <div class="card-body">
+                    <div id="event-form">
+                        <form id="createEventForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Event Title *</label>
+                                <input type="text" class="form-control" id="title" required>
+                                <div class="form-text">Give your event a catchy, descriptive title</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" rows="4" 
+                                          placeholder="Describe what attendees can expect from this magical experience..."></textarea>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="start_date" class="form-label">Start Date & Time *</label>
+                                        <input type="datetime-local" class="form-control" id="start_date" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="end_date" class="form-label">End Date & Time *</label>
+                                        <input type="datetime-local" class="form-control" id="end_date" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="thumbnail" class="form-label">Event Thumbnail</label>
+                                <input type="file" class="form-control" id="thumbnail" accept="image/*">
+                                <div class="form-text">Upload an image to represent your event (optional)</div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Cancellation Policy:</strong> Registrations can only be cancelled for events lasting 2 days or less, and must be cancelled at least 2 days before the event starts.
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="/" class="btn btn-secondary me-md-2">Cancel</a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-magic"></i> Create Event
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div id="success-message" style="display: none;">
+                        <div class="alert alert-success">
+                            <h5><i class="fas fa-check-circle"></i> Event Created Successfully!</h5>
+                            <p>Your magical event has been created and is now visible to potential attendees.</p>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                                <a href="/" class="btn btn-primary me-md-2">View All Events</a>
+                                <a href="/create/" class="btn btn-outline-primary" onclick="resetForm()">Create Another Event</a>
+                            </div>
+                        </div>
+                        <div id="created-event-details"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function parseDate(dateString) {
+    // Handle Django's datetime format with microseconds
+    if (!dateString) return new Date();
+    // Remove microseconds if present and parse
+    const cleanDate = dateString.replace(/\.\d{6}Z$/, 'Z');
+    return new Date(cleanDate);
+}
+
+$(document).ready(function() {
+    // Set minimum date to today
+    const now = new Date();
+    const minDateTime = now.toISOString().slice(0, 16);
+    $('#start_date').attr('min', minDateTime);
+    $('#end_date').attr('min', minDateTime);
+    
+    // Update end date minimum when start date changes
+    $('#start_date').change(function() {
+        const startDate = $(this).val();
+        if (startDate) {
+            $('#end_date').attr('min', startDate);
+        }
+    });
+    
+    $('#createEventForm').submit(function(e) {
+        e.preventDefault();
+        createEvent();
+    });
+});
+
+function createEvent() {
+    const formData = new FormData();
+    formData.append('title', $('#title').val());
+    formData.append('description', $('#description').val());
+    
+    // Format dates properly for Django
+    const startDate = new Date($('#start_date').val());
+    const endDate = new Date($('#end_date').val());
+    formData.append('start_date', startDate.toISOString().slice(0, 19));
+    formData.append('end_date', endDate.toISOString().slice(0, 19));
+    
+    const thumbnailFile = $('#thumbnail')[0].files[0];
+    if (thumbnailFile) {
+        formData.append('thumbnail', thumbnailFile);
+    }
+    
+    // Basic client-side validation
+    if (!$('#title').val() || !$('#start_date').val() || !$('#end_date').val()) {
+        showError('Please fill in all required fields.');
+        return;
+    }
+    
+    if (new Date($('#start_date').val()) >= new Date($('#end_date').val())) {
+        showError('Start date must be before end date.');
+        return;
+    }
+    
+    const button = $('#createEventForm button[type="submit"]');
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Creating Event...');
+    
+    // Clear any previous errors
+    $('.alert-danger').remove();
+    
+    $.ajax({
+        url: '/api/events/create/',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            $('#event-form').hide();
+            displayEventDetails(response.event);
+            $('#success-message').show();
+            
+            // Reset button
+            button.prop('disabled', false).html('<i class="fas fa-magic"></i> Create Event');
+        },
+        error: function(xhr) {
+            button.prop('disabled', false).html('<i class="fas fa-magic"></i> Create Event');
+            
+            let errorMessage = 'Failed to create event. Please try again.';
+            
+            if (xhr.responseJSON) {
+                const errors = xhr.responseJSON;
+                if (errors.non_field_errors) {
+                    errorMessage = errors.non_field_errors[0];
+                } else {
+                    // Show field-specific errors
+                    const fieldErrors = [];
+                    for (const field in errors) {
+                        if (errors[field] && Array.isArray(errors[field])) {
+                            fieldErrors.push(`${field}: ${errors[field][0]}`);
+                        }
+                    }
+                    if (fieldErrors.length > 0) {
+                        errorMessage = fieldErrors.join(', ');
+                    }
+                }
+            }
+            
+            showError(errorMessage);
+        }
+    });
+}
+
+function displayEventDetails(event) {
+    const startDate = parseDate(event.start_date);
+    const endDate = parseDate(event.end_date);
+    const thumbnailUrl = event.thumbnail || 'https://via.placeholder.com/300x200?text=Event';
+    
+    $('#created-event-details').html(`
+        <div class="card">
+            <div class="row g-0">
+                <div class="col-md-4">
+                    <img src="${thumbnailUrl}" class="img-fluid rounded-start h-100" 
+                         alt="${event.title}" style="object-fit: cover;">
+                </div>
+                <div class="col-md-8">
+                    <div class="card-body">
+                        <h5 class="card-title">${event.title}</h5>
+                        ${event.description ? `<p class="card-text">${event.description}</p>` : ''}
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar"></i> 
+                                ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}
+                            </small>
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> 
+                                ${event.duration_days || 0} day(s)
+                            </small>
+                        </p>
+                        <a href="/events/${event.id}/" class="btn btn-outline-primary btn-sm">
+                            View Event Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+function showError(message) {
+    $('#event-form').prepend(`
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle"></i> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+}
+
+function resetForm() {
+    $('#createEventForm')[0].reset();
+    $('.alert-danger').remove();
+    $('#success-message').hide();
+    $('#event-form').show();
+}
+</script>
+{% endblock %} 
