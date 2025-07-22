@@ -168,16 +168,19 @@ def send_verification_code(request):
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 html_message=f'''
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h2 style="color: #333;">Magic Events</h2>
-                        <h3 style="color: #666;">Email Verification</h3>
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px;">
+                    <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
+                        <h2 style="color: #ffffff; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">Magic Events</h2>
+                        <h3 style="color: #f0f0f0; margin: 10px 0 0 0; font-weight: normal;">Email Verification</h3>
                     </div>
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
-                        <p style="font-size: 16px; margin-bottom: 20px;">Your verification code is:</p>
-                        <div style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px; margin: 20px 0;">
+                    <div style="background: #f8fafc; padding: 30px; border-radius: 8px; text-align: center; border: 2px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <p style="font-size: 18px; margin-bottom: 25px; color: #2d3748; font-weight: 500;">Your verification code is:</p>
+                        <div style="font-size: 36px; font-weight: bold; color: #1a202c; letter-spacing: 8px; margin: 25px 0; padding: 20px; background: #ffffff; border: 3px solid #4299e1; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                             {code}
                         </div>
+                        <p style="font-size: 14px; color: #718096; margin-top: 20px;">
+                            This code will expire soon. Please use it to complete your registration.
+                        </p>
                     </div>
                 </div>
                 '''

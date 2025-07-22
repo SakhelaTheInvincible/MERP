@@ -205,6 +205,17 @@ function submitRegistration() {
         contentType: 'application/json',
         success: function(response) {
             $('#registration-form').hide();
+            
+            let emailNotification = '';
+            if (response.email_sent) {
+                emailNotification = `
+                    <div class="alert alert-info mt-2">
+                        <i class="fas fa-envelope"></i> 
+                        A confirmation email with your management code has been sent to your email address.
+                    </div>
+                `;
+            }
+            
             $('#registration-success').html(`
                 <div class="alert alert-success">
                     <h6><i class="fas fa-check-circle"></i> Registration Successful!</h6>
@@ -215,6 +226,7 @@ function submitRegistration() {
                     <small class="text-muted">
                         Save this code! You'll need it to manage your registration.
                     </small>
+                    ${emailNotification}
                     <div class="mt-3">
                         <a href="/manage/" class="btn btn-outline-primary btn-sm">
                             Manage Registration

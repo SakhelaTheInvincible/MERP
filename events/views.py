@@ -6,6 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
+from django.conf import settings
 from .models import Event, Registration
 from .serializers import (
     EventSerializer, EventCreateSerializer, RegistrationCreateSerializer, 
@@ -77,12 +79,61 @@ class RegistrationCreateView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         registration = serializer.save()
         
+        # Send management code via email
+        email_sent = False
+        try:
+            send_mail(
+                subject=f'Magic Events - Registration Confirmation for {registration.event.title}',
+                message=f'Your management code is: {registration.management_code}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[registration.user.email],
+                html_message=f'''
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px;">
+                    <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
+                        <h2 style="color: #ffffff; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">Magic Events</h2>
+                        <h3 style="color: #f0f0f0; margin: 10px 0 0 0; font-weight: normal;">Registration Confirmation</h3>
+                    </div>
+                    <div style="background: #f8fafc; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h4 style="color: #2d3748; margin-bottom: 15px; font-size: 20px; border-bottom: 2px solid #4299e1; padding-bottom: 10px;">Event: {registration.event.title}</h4>
+                        <div style="color: #4a5568; line-height: 1.6;">
+                            <p style="margin: 8px 0;"><strong style="color: #2d3748;">Start Date:</strong> {registration.event.start_date.strftime('%B %d, %Y at %I:%M %p')}</p>
+                            <p style="margin: 8px 0;"><strong style="color: #2d3748;">End Date:</strong> {registration.event.end_date.strftime('%B %d, %Y at %I:%M %p')}</p>
+                        </div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 30px; border-radius: 8px; text-align: center; border: 2px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <p style="font-size: 18px; margin-bottom: 25px; color: #2d3748; font-weight: 500;">Your management code is:</p>
+                        <div style="font-size: 20px; font-weight: bold; color: #1a202c; padding: 20px; background: #ffffff; border: 3px solid #4299e1; border-radius: 8px; margin: 25px 0; word-break: break-all; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: monospace;">
+                            {registration.management_code}
+                        </div>
+                        <p style="font-size: 16px; color: #4a5568; margin: 20px 0; font-weight: 500;">
+                            Save this code! You'll need it to view or cancel your registration.
+                        </p>
+                    </div>
+                    <div style="text-align: center; margin-top: 30px; padding: 20px; background: #edf2f7; border-radius: 8px;">
+                        <p style="font-size: 14px; color: #718096; margin: 0;">
+                            You can manage your registration at any time using this code.
+                        </p>
+                    </div>
+                </div>
+                '''
+            )
+            email_sent = True
+        except Exception as e:
+            # Email sending failed, but registration was successful
+            # Don't fail the registration, just log it
+            pass
+        
         # Return registration details with management code
         response_serializer = RegistrationSerializer(registration)
+        response_message = 'Registration successful! Please save your management code.'
+        if email_sent:
+            response_message += ' A confirmation email with your management code has been sent to your email address.'
+        
         return Response(
             {
-                'message': 'Registration successful! Please save your management code.',
-                'registration': response_serializer.data
+                'message': response_message,
+                'registration': response_serializer.data,
+                'email_sent': email_sent
             },
             status=status.HTTP_201_CREATED
         )
