@@ -18,7 +18,7 @@
                     <!-- Quick access to user's registrations -->
                     <div class="mb-4">
                         <button id="toggleRegistrationsBtn" class="btn btn-outline-primary" onclick="toggleMyRegistrations()">
-                            <i class="fas fa-list"></i> Show All My Registrations
+                            <i class="fas fa-list"></i> Show My Registrations
                         </button>
                     </div>
                     
@@ -84,7 +84,7 @@ function toggleMyRegistrations() {
     if (registrationsDiv.is(':visible')) {
         // Hide registrations
         registrationsDiv.hide();
-        button.html('<i class="fas fa-list"></i> Show All My Registrations');
+        button.html('<i class="fas fa-list"></i> Show My Registrations');
     } else {
         // Show registrations - always load fresh data
         loadMyRegistrations();
