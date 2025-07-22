@@ -4,6 +4,8 @@ from . import views
 urlpatterns = [
     # API endpoints
     path('api/events/', views.EventListView.as_view(), name='api-events-list'),
+    path('api/events/upcoming/', views.UpcomingEventsView.as_view(), name='api-events-upcoming'),
+    path('api/events/past/', views.PastEventsView.as_view(), name='api-events-past'),
     path('api/events/create/', views.EventCreateView.as_view(), name='api-event-create'),
     path('api/events/<int:pk>/', views.EventDetailView.as_view(), name='api-event-detail'),
     path('api/registrations/', views.RegistrationCreateView.as_view(), name='api-registration-create'),

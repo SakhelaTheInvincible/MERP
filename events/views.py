@@ -35,12 +35,30 @@ class EventCreateView(generics.CreateAPIView):
 
 
 class EventListView(generics.ListAPIView):
-    """List all upcoming events"""
+    """List all events - deprecated, use UpcomingEventsView or PastEventsView instead"""
     serializer_class = EventSerializer
     
     def get_queryset(self):
         # Show all events for now (can be filtered later if needed)
         return Event.objects.all().order_by('start_date')
+
+
+class UpcomingEventsView(generics.ListAPIView):
+    """List all upcoming events (end date is in the future)"""
+    serializer_class = EventSerializer
+    
+    def get_queryset(self):
+        now = timezone.now()
+        return Event.objects.filter(end_date__gt=now).order_by('start_date')
+
+
+class PastEventsView(generics.ListAPIView):
+    """List all past events (end date is in the past)"""
+    serializer_class = EventSerializer
+    
+    def get_queryset(self):
+        now = timezone.now()
+        return Event.objects.filter(end_date__lte=now).order_by('-end_date')
 
 
 class EventDetailView(generics.RetrieveAPIView):
