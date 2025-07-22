@@ -223,3 +223,37 @@ def verify_email_code(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'message': 'Server error'})
+
+@require_http_methods(["POST"])
+def check_username(request):
+    try:
+        data = json.loads(request.body)
+        username = data.get('username', '').strip()
+        
+        if not username:
+            return JsonResponse({'exists': False})
+        
+        # Check if username exists
+        exists = User.objects.filter(username=username).exists()
+        
+        return JsonResponse({'exists': exists})
+        
+    except Exception as e:
+        return JsonResponse({'exists': False, 'error': 'Server error'})
+
+@require_http_methods(["POST"])
+def check_email(request):
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return JsonResponse({'exists': False})
+        
+        # Check if email exists
+        exists = User.objects.filter(email=email).exists()
+        
+        return JsonResponse({'exists': exists})
+        
+    except Exception as e:
+        return JsonResponse({'exists': False, 'error': 'Server error'})

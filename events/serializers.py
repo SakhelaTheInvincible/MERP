@@ -55,7 +55,7 @@ class RegistrationCreateSerializer(serializers.ModelSerializer):
                 "Cannot register for events that have already started"
             )
         
-        # Check for duplicate registration
+        # Check for existing active registration
         if Registration.objects.filter(event=event, user=user, status='active').exists():
             raise serializers.ValidationError(
                 "You are already registered for this event"
@@ -64,8 +64,25 @@ class RegistrationCreateSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
+        user = self.context['request'].user
+        event = validated_data['event']
+        
+        # Check if there's an existing cancelled registration for this user/event
+        existing_registration = Registration.objects.filter(
+            event=event, 
+            user=user, 
+            status='cancelled'
+        ).first()
+        
+        if existing_registration:
+            # Reactivate the cancelled registration
+            existing_registration.phone = validated_data.get('phone', existing_registration.phone)
+            existing_registration.reactivate()
+            return existing_registration
+        else:
+            # Create a new registration
+            validated_data['user'] = user
+            return super().create(validated_data)
 
 
 class RegistrationSerializer(serializers.ModelSerializer):

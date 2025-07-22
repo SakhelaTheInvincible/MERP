@@ -117,6 +117,18 @@ class Registration(models.Model):
         self.cancelled_at = timezone.now()
         self.save()
 
+    def reactivate(self):
+        """Reactivate a cancelled registration"""
+        if self.status != 'cancelled':
+            raise ValidationError("Only cancelled registrations can be reactivated")
+        
+        if not self.event.can_register:
+            raise ValidationError('Cannot reactivate registration for events that have already started')
+        
+        self.status = 'active'
+        self.cancelled_at = None
+        self.save()
+
     def clean(self):
         if self.event and not self.event.can_register:
             raise ValidationError('Cannot register for events that have already started') 

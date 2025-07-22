@@ -211,21 +211,132 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let isEmailVerified = false;
     let countdownTimer = null;
+    let usernameCheckTimeout = null;
+    let emailCheckTimeout = null;
     
-    // Enable verify button when email is valid and make email readonly after verification
+    // Get username input and status elements
+    const usernameInput = document.getElementById('{{ form.username.id_for_label }}');
+    const usernameStatus = document.createElement('div');
+    usernameStatus.className = 'form-text';
+    usernameInput.parentElement.appendChild(usernameStatus);
+    
+    // Real-time username checking
+    usernameInput.addEventListener('input', function() {
+        const username = this.value.trim();
+        
+        // Clear previous timeout
+        if (usernameCheckTimeout) {
+            clearTimeout(usernameCheckTimeout);
+        }
+        
+        // Clear status if input is empty
+        if (!username) {
+            usernameStatus.textContent = '';
+            usernameStatus.className = 'form-text';
+            usernameInput.classList.remove('is-valid', 'is-invalid');
+            return;
+        }
+        
+        // Check username after 500ms delay
+        usernameCheckTimeout = setTimeout(() => {
+            fetch('{% url "accounts:check_username" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({username: username})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    usernameStatus.innerHTML = '<i class="fas fa-times-circle"></i> Username already taken';
+                    usernameStatus.className = 'form-text text-danger';
+                    usernameInput.classList.add('is-invalid');
+                    usernameInput.classList.remove('is-valid');
+                } else {
+                    usernameStatus.innerHTML = '<i class="fas fa-check-circle"></i> Username available';
+                    usernameStatus.className = 'form-text text-success';
+                    usernameInput.classList.add('is-valid');
+                    usernameInput.classList.remove('is-invalid');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking username:', error);
+                usernameStatus.textContent = '';
+                usernameStatus.className = 'form-text';
+            });
+        }, 500);
+    });
+    
+    // Enhanced email input validation with uniqueness check
     emailInput.addEventListener('input', function() {
         const email = this.value.trim();
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         
-        if (emailRegex.test(email) && !isEmailVerified) {
-            verifyEmailBtn.disabled = false;
+        // Clear previous timeout
+        if (emailCheckTimeout) {
+            clearTimeout(emailCheckTimeout);
+        }
+        
+        if (!email) {
             emailStatus.textContent = '';
             emailStatus.className = 'form-text';
-        } else if (!isEmailVerified) {
+            emailInput.classList.remove('is-valid', 'is-invalid');
             verifyEmailBtn.disabled = true;
             submitBtn.disabled = true;
-            emailStatus.textContent = '';
+            return;
         }
+        
+        if (!emailRegex.test(email)) {
+            emailStatus.textContent = '';
+            emailStatus.className = 'form-text';
+            emailInput.classList.remove('is-valid', 'is-invalid');
+            verifyEmailBtn.disabled = true;
+            submitBtn.disabled = true;
+            return;
+        }
+        
+        // Check email uniqueness after 500ms delay
+        emailCheckTimeout = setTimeout(() => {
+            fetch('{% url "accounts:check_email" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({email: email})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    emailStatus.innerHTML = '<i class="fas fa-times-circle"></i> Email already registered';
+                    emailStatus.className = 'form-text text-danger';
+                    emailInput.classList.add('is-invalid');
+                    emailInput.classList.remove('is-valid');
+                    verifyEmailBtn.disabled = true;
+                    submitBtn.disabled = true;
+                } else if (!isEmailVerified) {
+                    emailStatus.innerHTML = '<i class="fas fa-check-circle"></i> Email available';
+                    emailStatus.className = 'form-text text-success';
+                    emailInput.classList.add('is-valid');
+                    emailInput.classList.remove('is-invalid');
+                    verifyEmailBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error checking email:', error);
+                if (emailRegex.test(email) && !isEmailVerified) {
+                    verifyEmailBtn.disabled = false;
+                    emailStatus.textContent = '';
+                    emailStatus.className = 'form-text';
+                } else if (!isEmailVerified) {
+                    verifyEmailBtn.disabled = true;
+                    submitBtn.disabled = true;
+                    emailStatus.textContent = '';
+                }
+            });
+        }, 500);
     });
     
     // Send verification code
@@ -358,12 +469,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Prevent form submission if email not verified
+    // Prevent form submission if email not verified or username/email already exists
     document.getElementById('signupForm').addEventListener('submit', function(e) {
         if (!isEmailVerified) {
             e.preventDefault();
             emailStatus.textContent = 'Please verify your email first';
             emailStatus.className = 'form-text text-danger';
+            return;
+        }
+        
+        // Check for validation errors
+        const hasUsernameError = usernameInput.classList.contains('is-invalid');
+        const hasEmailError = emailInput.classList.contains('is-invalid');
+        
+        if (hasUsernameError || hasEmailError) {
+            e.preventDefault();
+            if (hasUsernameError) {
+                usernameStatus.textContent = 'Please fix username error';
+                usernameStatus.className = 'form-text text-danger';
+            }
+            if (hasEmailError) {
+                emailStatus.textContent = 'Please fix email error';
+                emailStatus.className = 'form-text text-danger';
+            }
         }
     });
 });
