@@ -42,39 +42,17 @@ An event registration platform built with Django and Django REST Framework that 
    cd MERP
    ```
 
-2. **Create virtual environment**
+2. **Run Setup**
    ```bash
-   python -m venv venv
-   
-   # Windows
-   venv\Scripts\activate
-   
-   # macOS/Linux
-   source venv/bin/activate
+   python setup.py
    ```
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run migrations**
-   ```bash
-   python manage.py makemigrations events
-   python manage.py migrate
-   ```
-
-5. **Create superuser (optional)**
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-6. **Start the server**
+3. **Start the server**
    ```bash
    python manage.py runserver
    ```
 
-7. **Access the application**
+4. **Access the application**
    - Web Interface: http://127.0.0.1:8000/
    - API Root: http://127.0.0.1:8000/api/
    - Admin Panel: http://127.0.0.1:8000/admin/
@@ -112,6 +90,7 @@ MERP/
 ├── static/                # Static files (created automatically)
 ├── db.sqlite3             # Database (created automatically)
 ├── manage.py              # Django management script
+├── setup.py               # Setup application
 ├── requirements.txt       # Python dependencies
 └── README.md              # This file
 ```
