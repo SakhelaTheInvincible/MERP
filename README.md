@@ -47,12 +47,20 @@ An event registration platform built with Django and Django REST Framework that 
    python setup.py
    ```
 
-3. **Start the server**
+3. **Create Env**
+   - Create .env file in root directory
+   - copy code from env.example to .env
+   - set up your email and password
+   - (hint) your password must be app password 
+   (example from gmail: https://security.google.com/settings/security/apppasswords)
+
+
+4. **Start the server**
    ```bash
    python manage.py runserver
    ```
 
-4. **Access the application**
+5. **Access the application**
    - Web Interface: http://127.0.0.1:8000/
    - API Root: http://127.0.0.1:8000/api/
    - Admin Panel: http://127.0.0.1:8000/admin/
