@@ -182,7 +182,7 @@ function quickCancelRegistration(managementCode) {
     }
     
     $.ajax({
-        url: `/api/registrations/${managementCode}/cancel/`,
+        url: `/api/registrations/cancel/${managementCode}/`,
         method: 'POST',
         success: function(response) {
             // Refresh the registrations list
@@ -234,7 +234,7 @@ function lookupRegistration() {
     $('.alert-danger').remove();
     
     $.ajax({
-        url: `/api/registrations/${managementCode}/`,
+        url: `/api/registrations/lookup/${managementCode}/`,
         method: 'GET',
         success: function(registration) {
             displayRegistrationDetails(registration);
@@ -364,7 +364,7 @@ function cancelRegistration(eventId) {
     const managementCode = $('#management_code').val();
     
     $.ajax({
-        url: `/api/registrations/${managementCode}/cancel/`,
+        url: `/api/registrations/cancel/${managementCode}/`,
         method: 'POST',
         success: function(response) {
             // Refresh the registration details to show updated status

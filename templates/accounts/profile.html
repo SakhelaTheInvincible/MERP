@@ -24,7 +24,7 @@
                     {% endif %}
                     
                     <!-- Profile Info Form -->
-                    <form method="post" class="mb-5">
+                    <form method="post" action="/accounts/profile/update/" class="mb-5">
                         {% csrf_token %}
                         <h4 class="mb-4">Personal Information</h4>
                         
@@ -58,7 +58,7 @@
                     </form>
                     
                     <!-- Password Change Form -->
-                    <form method="post">
+                    <form method="post" action="/accounts/profile/password-change/">
                         {% csrf_token %}
                         <h4 class="mb-4">Change Password</h4>
                         

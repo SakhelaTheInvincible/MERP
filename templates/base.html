@@ -667,10 +667,10 @@
                                 <i class="fas fa-user"></i> {{ user.username }}
                             </button>
                             <div class="user-dropdown-menu">
-                                <a href="{% url 'accounts:profile' %}" class="dropdown-item">
+                                <a href="{% url 'accounts:profile-list' %}" class="dropdown-item">
                                     <i class="fas fa-user-circle" style="margin-right: 8px;"></i>Profile
                                 </a>
-                                <form method="post" action="{% url 'accounts:logout' %}" style="margin: 0;">
+                                <form method="post" action="{% url 'accounts:auth-logout' %}" style="margin: 0;">
                                     {% csrf_token %}
                                     <button type="submit" class="dropdown-item">
                                         <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>Logout
@@ -682,10 +682,10 @@
                         <!-- Authentication buttons for non-authenticated users -->
                         <li>
                             <div class="auth-buttons">
-                                <a class="btn-login" href="{% url 'accounts:login' %}">
+                                <a class="btn-login" href="{% url 'accounts:auth-login' %}">
                                     <i class="fas fa-sign-in-alt" style="margin-right: 0.5rem;"></i> Login
                                 </a>
-                                <a class="btn-signup" href="{% url 'accounts:signup' %}">
+                                <a class="btn-signup" href="{% url 'accounts:auth-signup' %}">
                                     <i class="fas fa-user-plus" style="margin-right: 0.5rem;"></i> Sign Up
                                 </a>
                             </div>

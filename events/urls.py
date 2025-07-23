@@ -1,21 +1,18 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
+router = DefaultRouter()
+router.register(r'api/events', views.EventViewSet, basename='event')
+router.register(r'api/registrations', views.RegistrationViewSet, basename='registration')
+
 urlpatterns = [
-    # API endpoints
-    path('api/events/', views.EventListView.as_view(), name='api-events-list'),
-    path('api/events/upcoming/', views.UpcomingEventsView.as_view(), name='api-events-upcoming'),
-    path('api/events/past/', views.PastEventsView.as_view(), name='api-events-past'),
-    path('api/events/create/', views.EventCreateView.as_view(), name='api-event-create'),
-    path('api/events/<int:pk>/', views.EventDetailView.as_view(), name='api-event-detail'),
-    path('api/registrations/', views.RegistrationCreateView.as_view(), name='api-registration-create'),
-    path('api/registrations/my/', views.my_registrations, name='api-my-registrations'),
-    path('api/registrations/<uuid:management_code>/', views.registration_lookup, name='api-registration-lookup'),
-    path('api/registrations/<uuid:management_code>/cancel/', views.cancel_registration, name='api-registration-cancel'),
-    
     # UI endpoints
-    path('', views.events_list_ui, name='events-list'),
-    path('create/', views.event_create_ui, name='event-create'),
-    path('events/<int:event_id>/', views.event_detail_ui, name='event-detail'),
-    path('manage/', views.registration_management_ui, name='registration-management'),
-] 
+    path('', views.EventViewSet.as_view({'get': 'list_ui'}), name='events-list'),
+    path('create/', views.EventViewSet.as_view({'get': 'create_ui'}), name='event-create'),
+    path('events/<int:pk>/', views.EventViewSet.as_view({'get': 'detail_ui'}), name='event-detail'),
+    path('manage/', views.RegistrationViewSet.as_view({'get': 'management_ui'}), name='registration-management'),
+    
+    # API routes
+    path('', include(router.urls)),
+]

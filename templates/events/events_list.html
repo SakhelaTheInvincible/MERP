@@ -21,9 +21,11 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="mb-0" id="events-title">Upcoming Events</h2>
-                <a href="/create/" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Create Event
-                </a>
+                {% if user.is_staff %}
+                    <a href="/create/" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create Event
+                    </a>
+                {% endif %}
             </div>
             
             <!-- Toggle buttons for event types -->
@@ -97,8 +99,8 @@ function loadEvents() {
         method: 'GET',
         success: function(data) {
             $('#loading').hide();
-            if (data.results && data.results.length > 0) {
-                displayEvents(data.results);
+            if (data && data.length > 0) {
+                displayEvents(data);
                 $('#events-container').show();
             } else {
                 $('#no-events').show();

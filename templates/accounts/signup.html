@@ -140,7 +140,7 @@
                     <hr>
                     <div class="text-center">
                         <p class="mb-0">Already have an account? 
-                            <a href="{% url 'accounts:login' %}" class="text-decoration-none">
+                            <a href="{% url 'accounts:auth-login' %}" class="text-decoration-none">
                                 Login here
                             </a>
                         </p>
@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check username after 500ms delay
         usernameCheckTimeout = setTimeout(() => {
-            fetch('{% url "accounts:check_username" %}', {
+                                    fetch('/accounts/validation/check-username/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check email uniqueness after 500ms delay
         emailCheckTimeout = setTimeout(() => {
-            fetch('{% url "accounts:check_email" %}', {
+                                    fetch('/accounts/validation/check-email/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
     verifyEmailBtn.addEventListener('click', function() {
         const email = emailInput.value.trim();
         
-        fetch('{% url "accounts:send_verification_code" %}', {
+        fetch('/accounts/verification/send-code/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        fetch('{% url "accounts:verify_email_code" %}', {
+                                    fetch('/accounts/verification/verify-code/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
     resendCodeBtn.addEventListener('click', function() {
         const email = emailInput.value.trim();
         
-        fetch('{% url "accounts:send_verification_code" %}', {
+        fetch('/accounts/verification/send-code/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

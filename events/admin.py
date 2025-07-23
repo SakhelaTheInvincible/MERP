@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.shortcuts import redirect
-from django.urls import path
 from .models import Event, Registration
 
 
@@ -54,6 +53,6 @@ class RegistrationAdmin(admin.ModelAdmin):
     
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)
-        if obj:  # Editing existing object
+        if obj:
             readonly.extend(['event', 'user'])
         return readonly 

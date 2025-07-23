@@ -1,41 +1,66 @@
-from rest_framework import generics, status
-from rest_framework.decorators import api_view
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated, BasePermission
-from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated, BasePermission, AllowAny
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 from django.core.mail import send_mail
 from django.conf import settings
+from django.http import HttpResponseForbidden
 from .models import Event, Registration
 from .serializers import (
-    EventSerializer, EventCreateSerializer, RegistrationCreateSerializer, 
+    EventSerializer, EventCreateSerializer, RegistrationCreateSerializer,
     RegistrationSerializer, RegistrationManagementSerializer
 )
-from django.shortcuts import render
-from django.http import JsonResponse, HttpResponseForbidden
 
 class IsAdminUser(BasePermission):
-    """
-    Custom permission to only allow admin users to create events.
-    """
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.is_staff
 
 
-class EventCreateView(generics.CreateAPIView):
-    """Create a new event - Admin only"""
-    serializer_class = EventCreateSerializer
-    permission_classes = [IsAdminUser]
-    
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+class EventViewSet(viewsets.ViewSet):
+    """EventViewSet handles all event-related operations"""
+    permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        if self.action in ['create', 'create_ui']: # only admin can create events
+            self.permission_classes = [IsAdminUser]
+        return super().get_permissions()
+
+    def list(self, request):
+        """list all events"""
+        queryset = Event.objects.all().order_by('start_date')
+        serializer = EventSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """list all upcoming events (end date is in the future)"""
+        queryset = Event.objects.filter(end_date__gt=timezone.now()).order_by('start_date')
+        serializer = EventSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def past(self, request):
+        """list all past events"""
+        queryset = Event.objects.filter(end_date__lte=timezone.now()).order_by('-end_date')
+        serializer = EventSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        """get specific event"""
+        event = get_object_or_404(Event, pk=pk)
+        serializer = EventSerializer(event, context={'request': request})
+        return Response(serializer.data)
+
+    def create(self, request):
+        """create a new event - admin only"""
+        serializer = EventCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         event = serializer.save()
-        
-        # Return event details
-        response_serializer = EventSerializer(event)
+        response_serializer = EventSerializer(event, context={'request': request})
         return Response(
             {
                 'message': 'Event created successfully!',
@@ -44,51 +69,37 @@ class EventCreateView(generics.CreateAPIView):
             status=status.HTTP_201_CREATED
         )
 
+    @action(detail=False, methods=['get'], url_path='ui/list')
+    def list_ui(self, request):
+        """web UI for listing events"""
+        return render(request, 'events/events_list.html')
 
-class EventListView(generics.ListAPIView):
-    """List all events - deprecated, use UpcomingEventsView or PastEventsView instead"""
-    serializer_class = EventSerializer
-    
-    def get_queryset(self):
-        # Show all events for now (can be filtered later if needed)
-        return Event.objects.all().order_by('start_date')
+    @action(detail=True, methods=['get'], url_path='ui/detail')
+    def detail_ui(self, request, pk=None):
+        """web UI for event details"""
+        event = get_object_or_404(Event, id=pk)
+        return render(request, 'events/event_detail.html', {'event': event})
 
-
-class UpcomingEventsView(generics.ListAPIView):
-    """List all upcoming events (end date is in the future)"""
-    serializer_class = EventSerializer
-    
-    def get_queryset(self):
-        now = timezone.now()
-        return Event.objects.filter(end_date__gt=now).order_by('start_date')
-
-
-class PastEventsView(generics.ListAPIView):
-    """List all past events (end date is in the past)"""
-    serializer_class = EventSerializer
-    
-    def get_queryset(self):
-        now = timezone.now()
-        return Event.objects.filter(end_date__lte=now).order_by('-end_date')
+    @method_decorator(login_required)
+    @action(detail=False, methods=['get'], url_path='ui/create')
+    def create_ui(self, request):
+        """web UI for creating events"""
+        if not request.user.is_staff:
+            return HttpResponseForbidden("Only admin users can create events.")
+        return render(request, 'events/event_create.html')
 
 
-class EventDetailView(generics.RetrieveAPIView):
-    """Get details of a specific event"""
-    queryset = Event.objects.all()
-    serializer_class = EventSerializer
-
-
-class RegistrationCreateView(generics.CreateAPIView):
-    """Create a new registration for an event"""
-    serializer_class = RegistrationCreateSerializer
+class RegistrationViewSet(viewsets.ViewSet):
+    """RegistrationViewSet handles all registration-related operations"""
     permission_classes = [IsAuthenticated]
-    
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+
+    def create(self, request):
+        """new registration for an event"""
+        serializer = RegistrationCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         registration = serializer.save()
-        
-        # Send management code via email
+
+        # send management code via email
         email_sent = False
         try:
             send_mail(
@@ -128,16 +139,13 @@ class RegistrationCreateView(generics.CreateAPIView):
             )
             email_sent = True
         except Exception as e:
-            # Email sending failed, but registration was successful
-            # Don't fail the registration, just log it
             pass
-        
-        # Return registration details with management code
-        response_serializer = RegistrationSerializer(registration)
+
+        response_serializer = RegistrationSerializer(registration, context={'request': request})
         response_message = 'Registration successful! Please save your management code.'
         if email_sent:
             response_message += ' A confirmation email with your management code has been sent to your email address.'
-        
+
         return Response(
             {
                 'message': response_message,
@@ -147,55 +155,39 @@ class RegistrationCreateView(generics.CreateAPIView):
             status=status.HTTP_201_CREATED
         )
 
-
-@api_view(['GET'])
-def registration_lookup(request, management_code):
-    """Look up registration by management code - only for the current user"""
-    if not request.user.is_authenticated:
-        return Response(
-            {'error': 'Authentication required'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    try:
-        # Only allow users to look up their own registrations
-        registration = get_object_or_404(
-            Registration, 
-            management_code=management_code,
-            user=request.user
-        )
-        serializer = RegistrationManagementSerializer(registration)
+    @action(detail=False, methods=['get'])
+    def my(self, request):
+        """get last 3 registrations for the current user"""
+        registrations = Registration.objects.filter(user=request.user).order_by('-created_at')[:3]
+        serializer = RegistrationManagementSerializer(registrations, many=True, context={'request': request})
         return Response(serializer.data)
-    except Exception as e:
-        return Response(
-            {'error': 'Registration not found or you do not have permission to access it'},
-            status=status.HTTP_404_NOT_FOUND
-        )
 
-
-@api_view(['POST'])
-def cancel_registration(request, management_code):
-    """Cancel a registration using management code - only for the current user"""
-    if not request.user.is_authenticated:
-        return Response(
-            {'error': 'Authentication required'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    try:
-        # Only allow users to cancel their own registrations
+    @action(detail=False, methods=['get'], url_path='lookup/(?P<management_code>[^/.]+)')
+    def lookup(self, request, management_code=None):
+        """find registration by management code"""
         registration = get_object_or_404(
-            Registration, 
+            Registration,
             management_code=management_code,
             user=request.user
         )
-        
+        serializer = RegistrationManagementSerializer(registration, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='cancel/(?P<management_code>[^/.]+)')
+    def cancel(self, request, management_code=None):
+        """cancel registration by management code"""
+        registration = get_object_or_404(
+            Registration,
+            management_code=management_code,
+            user=request.user
+        )
+
         if registration.status == 'cancelled':
             return Response(
                 {'error': 'Registration is already cancelled'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         if not registration.can_cancel():
             return Response(
                 {
@@ -204,10 +196,10 @@ def cancel_registration(request, management_code):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         registration.cancel()
-        serializer = RegistrationManagementSerializer(registration)
-        
+        serializer = RegistrationManagementSerializer(registration, context={'request': request})
+
         return Response(
             {
                 'message': 'Registration cancelled successfully',
@@ -215,48 +207,9 @@ def cancel_registration(request, management_code):
             },
             status=status.HTTP_200_OK
         )
-        
-    except Exception as e:
-        return Response(
-            {'error': 'Unable to cancel registration or you do not have permission'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
 
-
-def events_list_ui(request):
-    """Basic web interface for listing events"""
-    return render(request, 'events/events_list.html')
-
-
-def event_detail_ui(request, event_id):
-    """Basic web interface for event details and registration"""
-    event = get_object_or_404(Event, id=event_id)
-    return render(request, 'events/event_detail.html', {'event': event})
-
-
-@api_view(['GET'])
-def my_registrations(request):
-    """Get all registrations for the current user"""
-    if not request.user.is_authenticated:
-        return Response(
-            {'error': 'Authentication required'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    registrations = Registration.objects.filter(user=request.user).order_by('-created_at')[:3]
-    serializer = RegistrationManagementSerializer(registrations, many=True)
-    return Response(serializer.data)
-
-
-@login_required
-def registration_management_ui(request):
-    """Basic web interface for registration management - requires login"""
-    return render(request, 'events/registration_management.html')
-
-
-@login_required
-def event_create_ui(request):
-    """Basic web interface for creating events - Admin only"""
-    if not request.user.is_staff:
-        return HttpResponseForbidden("Only admin users can create events.")
-    return render(request, 'events/event_create.html') 
+    @method_decorator(login_required)
+    @action(detail=False, methods=['get'], url_path='ui/manage')
+    def management_ui(self, request):
+        """web UI for registration management"""
+        return render(request, 'events/registration_management.html')

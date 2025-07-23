@@ -3,8 +3,6 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth.models import User
-from django.core.files.base import ContentFile
-from datetime import timedelta
 import os
 from django.conf import settings
 
@@ -25,7 +23,7 @@ class Event(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        # If no thumbnail is provided, set the default one
+        # if no thumbnail, set the default event image
         if not self.thumbnail:
             default_thumbnail_path = os.path.join(settings.MEDIA_ROOT, 'event_thumbnails', 'event.jpg')
             if os.path.exists(default_thumbnail_path):
@@ -40,19 +38,19 @@ class Event(models.Model):
         
     @property
     def duration_days(self):
-        """Calculate event duration in days"""
+        """calculate event duration"""
         if self.start_date and self.end_date:
             return (self.end_date - self.start_date).days
         return 0
 
     @property
     def is_upcoming(self):
-        """Check if event is upcoming"""
+        """check if event is upcoming"""
         return self.start_date > timezone.now()
 
     @property
     def can_register(self):
-        """Check if registration is still possible (event hasn't started)"""
+        """event hasn't started -> registration is possible"""
         return self.start_date > timezone.now()
 
 
@@ -72,7 +70,7 @@ class Registration(models.Model):
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ['event', 'user']  # One registration per user per event
+        unique_together = ['event', 'user']  # one registration per user per event
         ordering = ['-created_at']
 
     def __str__(self):
@@ -87,21 +85,18 @@ class Registration(models.Model):
         return self.user.email
 
     def can_cancel(self):
-        """
-        Check if registration can be cancelled based on business rules:
-        - Event duration must be no longer than 2 days
-        - Cancellation must be at least 2 days before event start
+        """ check if registration can be cancelled:
+        - duration must be <= 2 days
+        - cancellation must be <= 2 days before event start
         """
         if self.status == 'cancelled':
             return False
             
         now = timezone.now()
         
-        # Check if event duration is no longer than 2 days
         if self.event.duration_days > 2:
             return False
             
-        # Check if cancellation is at least 2 days before event start
         days_until_event = (self.event.start_date - now).days
         if days_until_event < 2:
             return False
@@ -109,7 +104,6 @@ class Registration(models.Model):
         return True
 
     def cancel(self):
-        """Cancel the registration if cancellation rules allow"""
         if not self.can_cancel():
             raise ValidationError("This registration cannot be cancelled")
         
@@ -118,7 +112,7 @@ class Registration(models.Model):
         self.save()
 
     def reactivate(self):
-        """Reactivate a cancelled registration"""
+        """reactivate a cancelled registration"""
         if self.status != 'cancelled':
             raise ValidationError("Only cancelled registrations can be reactivated")
         

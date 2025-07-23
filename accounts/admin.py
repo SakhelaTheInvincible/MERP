@@ -2,9 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 
-# Unregister the default UserAdmin
 admin.site.unregister(User)
-
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     list_display = ['username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined']
@@ -26,7 +24,6 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
     
-    # Make password fields available in add form
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
