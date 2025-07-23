@@ -1,122 +1,242 @@
-# Magic Events - Event Registration Platform
+# 🎉 Magic Events - Event Registration Platform
 
-An event registration platform built with Django and Django REST Framework that allows customers to register for events and manage their bookings.
+An event registration platform built with **Django** and **Django REST Framework** that allows customers to register for events and manage their bookings.
 
-## Features
+---
 
-### Core Functionality
-- **Event Creation**: Create events with title, start/end dates, thumbnails, and descriptions
-- **Event Management**: Full CRUD operations for events
-- **User Registration**: Self-service registration for events
-- **Profile Management**: View/Update user profile
-- **Management Codes**: Unique codes for registration management
-- **Cancellation Logic**: Business rules for event cancellation
-- **REST API**: Complete API for frontend integration
-- **Web Interface**: Modern, responsive UI for event creation, browsing, and registration
+## ✨ Features
 
-### Business Rules
-- Clients receive a unique management code after registration
-- Cancellation is only allowed for:
-  - Events lasting no longer than 2 days
-  - At least 2 days before the event start date
-- One registration per email per event
+### ⚙️ Core Functionality
 
-## Technology Stack
+- 📝 **Event Creation**: Title, start/end dates, thumbnails, and descriptions
+- 🧩 **Event Management**: Full CRUD support
+- 👤 **User Registration**: Self-service signup with email verification
+- 🧾 **Profile Management**: View/Update profile
+- 🆔 **Management Codes**: Unique codes for registration lookup
+- ❌ **Cancellation Logic**: Business rules enforced
+- 🔌 **REST API**: Complete API for frontend
+- 🌐 **Web Interface**: Responsive UI for browsing and registration
 
-- **Backend**: Django 4.2.7, Django REST Framework 3.14.0
-- **Database**: SQLite (easily replaceable with PostgreSQL/MySQL)
-- **Frontend**: Bootstrap 5, jQuery, Font Awesome
-- **Image Handling**: Pillow for thumbnail processing
+### 🔐 Authentication & Security
 
-## Quick Start
+- ✉️ **Email Verification**: 6-digit verification codes
+- ⚡ **Real-time Validation**: Live checks for username/email availability
+- 📧 **Email Uniqueness**: Strict uniqueness enforced
+- 🔒 **Session Management**: Secure verification handling
+- 👥 **Enhanced User Creation**: First name, last name required
 
-### Prerequisites
+### 📬 Email Notification System
+
+- ✅ **Registration Confirmations**: Auto emails with codes
+- 🧾 **Verification Codes**: Styled HTML templates
+- 📄 **Event Details**: Rich HTML content
+- 📡 **SMTP Integration**: Gmail/App Password ready
+
+### 🗂️ Advanced Registration Management
+
+- 🔄 **Reactivation**: Restore cancelled registrations
+- ⚡ **Quick Access**: View recent registrations instantly
+- 🧠 **Enhanced Cancellation**: Smart logic, better UX
+- 📊 **Dashboard**: Admin registration management
+
+### 🛠️ Admin Interface Enhancements
+
+- 👑 **Custom User Admin**: Clean, organized interface
+- 🤭 **Registration Monitoring**: Search + filter tools
+- 🔐 **Admin-only Features**: Restricted access
+- 🧑‍💼 **User Management**: Full control over users
+
+### 🔧 API Architecture
+
+- 🧱 **ViewSet-based**: Modular DRF ViewSets
+- 💃️ **Modular Design**: Separation of concerns
+- 🌐 **Better URLs**: Clean endpoint structures
+- 🛡️ **Permissions**: Role-based access
+
+### 📏 Business Rules
+
+- ✅ Users get unique management code after registration
+- ✉️ Email verification is **mandatory**
+- ❌ Cancellation allowed only if:
+  - Event is **≤ 2 days**
+  - Requested **≥ 2 days** before start
+- 🧑 One registration per email per event
+- 🔄 Cancelled registrations can be reactivated if event hasn't started
+
+---
+
+## 🧱 Technology Stack
+
+- 🐍 **Backend**: Django 4.2.7, DRF 3.14.0
+- 📓 **Database**: SQLite (easy to switch to PostgreSQL/MySQL)
+- 🖼️ **Frontend**: Bootstrap 5, jQuery, Font Awesome
+- 🖼️ **Image Handling**: Pillow
+- 📧 **Email**: SMTP with HTML templates
+- 🔐 **Authentication**: Session-based + email verification
+
+---
+
+## 🚀 Quick Start
+
+### 📦 Prerequisites
+
 - Python 3.8+
 - pip
 
-### Installation
+### 🛠️ Installation
 
-1. **Clone/Download the project**
+1. **Clone the project**
+
    ```bash
    git clone https://github.com/SakhelaTheInvincible/MERP.git
    cd MERP
    ```
 
 2. **Run Setup**
+
    ```bash
    python setup.py
    ```
 
-3. **Create Env**
-   - Create .env file in root directory
-   - copy code from env.example to .env
-   - set up your email and password
-   - (hint) your password must be app password 
-   (example from gmail: https://security.google.com/settings/security/apppasswords)
+   The setup script will:
 
+   - Create virtual environment
+   - Install dependencies
+   - Run migrations
+   - Optionally create superuser
+   - Create required folders
 
-4. **Start the server**
+3. **Create ENV**
+   - Create .env file
+   - Copy code from `.env.example` and paste it in `.env`
+   - set up your email and password fields
+   (hint) your password must be app password
+     (e.g., from Gmail: [https://security.google.com/settings/security/apppasswords](https://security.google.com/settings/security/apppasswords))
+
+4. **Start Development Server**
+
    ```bash
    python manage.py runserver
    ```
 
-5. **Access the application**
-   - Web Interface: http://127.0.0.1:8000/
-   - API Root: http://127.0.0.1:8000/api/
-   - Admin Panel: http://127.0.0.1:8000/admin/
+5. **Access App**
 
-## Project Structure
+   - 🌍 Web: `http://127.0.0.1:8000/`
+   - 🔗 API: `http://127.0.0.1:8000/api/`
+   - 🔐 Admin: `http://127.0.0.1:8000/admin/`
+
+---
+
+## 🗂️ Project Structure
 
 ```
 MERP/
-├── magic_events/           # Django project settings
-│   ├── __init__.py
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── events/                 # Main application
-│   ├── __init__.py
-│   ├── admin.py           # Admin interface configuration
-│   ├── apps.py
-│   ├── models.py          # Event and Registration models
-│   ├── serializers.py     # DRF serializers
-│   ├── urls.py            # URL routing
-│   └── views.py           # API and web views
-├── accounts/              # user management
-│   ├── __init__.py
-│   ├── apps.py
-│   ├── forms.py           # Manage form updates
-│   ├── urls.py            # URL routing
-│   └── views.py           # API and web views
-├── templates/             # HTML templates
-│   ├── base.html
-│   └── events/
-│       ├── events_list.html
-│       ├── event_detail.html
-│       └── registration_management.html
-├── media/                 # User uploads (created automatically)
-├── static/                # Static files (created automatically)
-├── db.sqlite3             # Database (created automatically)
-├── manage.py              # Django management script
-├── setup.py               # Setup application
-├── requirements.txt       # Python dependencies
-└── README.md              # This file
+├── magic_events/                         # 🚀 Django project settings
+│   ├── settings.py                       # ⚙️ Main configuration
+│   ├── urls.py                           # 🌐 Main URL routing
+│   └── wsgi.py                           # 🔗 WSGI application
+├── events/                               # 📅 Main events application
+│   ├── admin.py                          # 🛠️ Admin interface config
+│   ├── models.py                         # 📊 Event & Registration models
+│   ├── serializers.py                    # 🔄 DRF serializers
+│   └── views.py                          # 📱 API & web views
+├── accounts/                             # 👤 User management & auth
+│   ├── admin.py                          # 🛠️ Enhanced user admin
+│   ├── forms.py                          # 📝 Custom forms (signup, profile)
+│   └── views.py                          # 🔐 Auth, verification ViewSets
+├── templates/                            # 🎨 HTML templates
+│   ├── base.html                         # 📄 Base template layout
+│   ├── accounts/                         # 🔐 Authentication templates
+│   │   ├── login.html                    # 🚪 Login page
+│   │   ├── signup.html                   # ✍️ Enhanced signup with verification
+│   │   └── profile.html                  # 👤 User profile page
+│   └── events/                           # 📅 Event templates
+│       ├── events_list.html              # 📋 Events listing page
+│       ├── event_detail.html             # 📖 Event details page
+│       ├── event_create.html             # ➕ Event creation form
+│       └── registration_management.html  # 🗂️ Registration dashboard
+├── media/                                # 📁 User uploads (auto-created)
+├── static/                               # 🎨 Static files (auto-created)
+├── db.sqlite3                            # 💾 Database (auto-created)
+├── manage.py                             # 🔧 Django management script
+├── setup.py                              # 🛠️ Automated setup script
+├── requirements.txt                      # 📦 Python dependencies
+└── README.md                             # 📚 This documentation
 ```
 
-## Admin Interface
+---
 
-Access the Django admin at `/admin/` to:
-- Create and manage events
-- View all registrations
-- Monitor registration statistics
-- Manage user accounts
+## 📧 Email Configuration
 
+The platform includes a comprehensive email notification system:
 
-### Cancellation Rules
-The platform implements specific business rules for registration cancellation:
+### ⚡ Setup Requirements
 
-1. **Event Duration Check**: Only events lasting 2 days or less can be cancelled
-2. **Advance Notice**: Cancellations must be made at least 2 days before event start
-3. **Status Check**: Only active registrations can be cancelled
+1. Gmail account with App Password enabled
+2. Environment variables in `.env`:
+   ```
+   EMAIL_HOST_USER=your-email@gmail.com
+   EMAIL_HOST_PASSWORD=your-app-password
+   ```
 
-These rules are enforced both in the API and the web interface.
+### 📢 Email Features
+
+- 🧲 **Verification Codes**: 6-digit codes
+- ✅ **Registration Confirmations**: With event details
+- 📅 **Professional Templates**: HTML email designs
+- ⚠️ **Error Handling**: Graceful fallback on failure
+
+---
+
+## 📍 API Endpoints
+
+### 🔐 Authentication & User Management
+
+- `POST /accounts/auth/signup/` – Register with verification
+- `POST /accounts/auth/login/` – Login
+- `POST /accounts/verification/send-code/` – Send code
+- `POST /accounts/verification/verify-code/` – Verify code
+- `POST /accounts/validation/check-username/` – Check username
+- `POST /accounts/validation/check-email/` – Check email
+- `GET/PUT /accounts/profile/` – Manage profile
+
+### 📅 Events & Registrations
+
+- `GET  /api/events/` – List events
+- `POST /api/events/` – Create event *(admin)*
+- `GET  /api/events/{id}/` – Event details
+- `POST /api/registrations/` – Register
+- `GET  /api/registrations/my/` – My registrations
+- `GET  /api/registrations/lookup/{code}/` – Lookup by code
+- `POST /api/registrations/cancel/{code}/` – Cancel
+
+---
+
+## 👤 Admin Interface
+
+Access Django Admin at `/admin/` to:
+
+- ✍️ Manage events
+- 📊 View/monitor registrations
+- 🤝 Manage users
+- 📈 View login stats and email verifications
+
+### 🧑‍💼 Admin Features
+
+- 👤 **Enhanced User Admin**
+- 🔎 **Advanced Filtering**
+- ⚖️ **Permission Controls**
+- 📒 **Bulk Operations**
+
+### 🔒 User Roles
+
+- **Regular Users**: Register/manage own events
+- **Staff/Admins**: Create/manage all data
+
+### ⛔️ Cancellation Rules
+
+1. ⏳ **Event Duration**: Must be ≤ 2 days
+2. ⏰ **Advance Notice**: Cancel ≥ 2 days before event
+3. 🔁 **Status Check**: Must be active
+
+All rules enforced in **API** & **Web UI**.
