@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
@@ -13,12 +13,21 @@ from .serializers import (
     EventSerializer, EventCreateSerializer, RegistrationCreateSerializer, 
     RegistrationSerializer, RegistrationManagementSerializer
 )
+from django.shortcuts import render
+from django.http import JsonResponse, HttpResponseForbidden
+
+class IsAdminUser(BasePermission):
+    """
+    Custom permission to only allow admin users to create events.
+    """
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_staff
 
 
 class EventCreateView(generics.CreateAPIView):
-    """Create a new event"""
+    """Create a new event - Admin only"""
     serializer_class = EventCreateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -214,11 +223,6 @@ def cancel_registration(request, management_code):
         )
 
 
-# UI Views (for basic web interface)
-from django.shortcuts import render
-from django.http import JsonResponse
-
-
 def events_list_ui(request):
     """Basic web interface for listing events"""
     return render(request, 'events/events_list.html')
@@ -252,5 +256,7 @@ def registration_management_ui(request):
 
 @login_required
 def event_create_ui(request):
-    """Basic web interface for creating events"""
+    """Basic web interface for creating events - Admin only"""
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Only admin users can create events.")
     return render(request, 'events/event_create.html') 

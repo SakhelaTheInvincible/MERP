@@ -117,6 +117,12 @@ def signup_view(request):
         if form.is_valid():
             # Check if email is verified in session
             email = form.cleaned_data['email'].lower()
+            
+            # Check if email already exists
+            if User.objects.filter(email=email).exists():
+                messages.error(request, 'An account with this email already exists.')
+                return render(request, 'registration/signup.html', {'form': form})
+            
             verified_emails = request.session.get('verified_emails', [])
             
             if email not in verified_emails:

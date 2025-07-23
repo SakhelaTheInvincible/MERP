@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import path
 from .models import Event, Registration
 
 
@@ -21,6 +23,10 @@ class EventAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def add_view(self, request, form_url='', extra_context=None):
+        """Redirect to custom event creation page instead of admin form"""
+        return redirect('/create/')
 
 
 @admin.register(Registration)

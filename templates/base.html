@@ -653,8 +653,12 @@
                 <ul class="nav-menu" id="navMenu">
                     <li><a class="nav-link" href="/"><i class="fas fa-calendar"></i> Events</a></li>
                     {% if user.is_authenticated %}
+                        <!-- Admin-only menu items -->
+                        {% if user.is_staff %}
+                            <li><a class="nav-link" href="/create/"><i class="fas fa-plus"></i> Create Event</a></li>
+                            <li><a class="nav-link" href="/admin/"><i class="fas fa-cog"></i> Admin</a></li>
+                        {% endif %}
                         <!-- Authenticated user menu items -->
-                        <li><a class="nav-link" href="/create/"><i class="fas fa-plus"></i> Create Event</a></li>
                         <li><a class="nav-link" href="/manage/"><i class="fas fa-list-check"></i> Manage Registrations</a></li>
                         
                         <!-- User dropdown -->
