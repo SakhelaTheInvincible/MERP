@@ -2,6 +2,12 @@
 
 An event registration platform built with **Django** and **Django REST Framework** that allows customers to register for events and manage their bookings.
 
+## 🎬 Demo
+
+[![Magic Events Demo](https://img.youtube.com/vi/TwH9rnvydLk/maxresdefault.jpg)](https://www.youtube.com/watch?v=TwH9rnvydLk)
+
+*👆 Click the image above to watch the full demonstration*
+
 ---
 
 ## ✨ Features
